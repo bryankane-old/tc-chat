@@ -51,8 +51,8 @@ app.io.route('room', {
             new Room({ course: course }).save().then(function(rm) {
 
                 // Create a participant object for each participant
-                _.each(participants, function(p) {
-                    new Participant({ room: rm.id, username: p }).save()
+                _.each(participants, function(pUser) {
+                    new Participant({ room: rm.id, username: pUser }).save()
                 })
             })
         })
@@ -67,7 +67,22 @@ app.io.route('participant', {
             States can be: "open", "minimized", or "closed"
          */
 
-        console.log("update participant state")
+        // load the room and new state from the request data
+        roomId = req.data.room
+        state = req.data.state
+
+        // load in the course and current username from the socket properties
+        getUserData(req, function(course, username){
+
+            // fetch the participant model for the given user and room
+            // and then save it with the updated state
+            new Participant({room: roomId, username: username})
+                .fetch({require: true})
+                .then(function(p) {
+                    p.save({state: state}, {patch: true})
+                })
+        })
+
         
     },
     touch: function(req) {
@@ -75,7 +90,20 @@ app.io.route('participant', {
             Updates the 'lastSeen' property with the current timestamp
          */
         
-        console.log("touch")
+        // load the room and new state from the request data
+        roomId = req.data.room
+
+        // load in the course and current username from the socket properties
+        getUserData(req, function(course, username){
+
+            // fetch the participant model for the given user and room
+            // and then save it with the updated state
+            new Participant({room: roomId, username: username})
+                .fetch({require: true})
+                .then(function(p) {
+                    p.save({lastSeen: new Date()}, {patch: true})
+                })
+        })
     }
 })
 

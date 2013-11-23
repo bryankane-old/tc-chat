@@ -1,5 +1,8 @@
 var Bookshelf  = require('bookshelf').db;
 
 module.exports = Bookshelf.Model.extend({
-	tableName: 'participants'
+	tableName: 'participants',
+	defaults: {
+    	lastSeen:  new Date(),
+    }
 });
