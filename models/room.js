@@ -1,5 +1,8 @@
 var Bookshelf  = require('bookshelf').db;
 
 module.exports = Bookshelf.Model.extend({
-	tableName: 'rooms'
+	tableName: 'rooms',
+	participants: function() {
+        return this.hasMany(require('./participant'))
+    }
 });

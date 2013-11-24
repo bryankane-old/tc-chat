@@ -35,8 +35,16 @@ app.io.route('user', {
 
     // Load all rooms that the user is in, along with all associated messages
     new ParticipantList()
-      .fetch({withRelated: ['room', 'messages']})
+      .fetch({withRelated: ['room', 'messages', 'room.participants']})
       .then(function(participants) {
+
+        // Remove all participant data from rooms except participant name
+        // (We don't need to tell someone if the other person has the chat minimized!)
+        participants = participants.toJSON().map(function(p) {
+          p.room.participants = _.pluck(p.room.participants, "username")
+          return p;
+        })
+
         // Send the user the initial data necessary to start the chat application
         req.io.emit('bootstrap', participants)
       })
