@@ -5,5 +5,8 @@ module.exports = Bookshelf.Model.extend({
 	tableName: 'messages',
 	participant: function() {
 		return this.belongsTo(Participant)
-	}
+	},
+	defaults: {
+        timestamp: new Date(),
+    }
 });

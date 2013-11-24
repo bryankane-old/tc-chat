@@ -5,10 +5,20 @@ db = require('./db')
 
 _ = require('underscore')
 
+app.use(function(err, req, res, next){
+  console.error(err.stack);
+  res.send(500, 'Something broke!');
+});
+
 
 // Load in models
 Room = require('./models/room')
 Participant = require('./models/participant')
+Message = require('./models/message')
+
+
+// Load in collections
+ParticipantList = require('./collections/participant_list')
 
 
 app.io.route('user', {
@@ -34,6 +44,15 @@ getUserData = function(req, cb) {
     })
 }
 
+// Set up a global function that lets us communicate with a user
+app.io.sendToUser = function(course, username, event, data) {
+    // console.log("sending:")
+    // console.log("room: " + course + "_" + username)
+    // console.log("event: " + event)
+    // console.log("data: " + data)
+    app.io.room(course + "_" + username).broadcast(event, data)
+}
+
 app.io.route('room', {
     create: function(req) {
         /* 
@@ -52,7 +71,7 @@ app.io.route('room', {
 
                 // Create a participant object for each participant
                 _.each(participants, function(pUser) {
-                    new Participant({ room: rm.id, username: pUser }).save()
+                    new Participant({ room_id: rm.id, username: pUser }).save()
                 })
             })
         })
@@ -68,7 +87,7 @@ app.io.route('participant', {
          */
 
         // load the room and new state from the request data
-        roomId = req.data.room
+        room_id = req.data.room
         state = req.data.state
 
         // load in the course and current username from the socket properties
@@ -76,7 +95,7 @@ app.io.route('participant', {
 
             // fetch the participant model for the given user and room
             // and then save it with the updated state
-            new Participant({room: roomId, username: username})
+            new Participant({room_id: room_id, username: username})
                 .fetch({require: true})
                 .then(function(p) {
                     p.save({state: state}, {patch: true})
@@ -90,15 +109,15 @@ app.io.route('participant', {
             Updates the 'lastSeen' property with the current timestamp
          */
         
-        // load the room and new state from the request data
-        roomId = req.data.room
+        // load the room from the request data
+        room_id = req.data.room
 
         // load in the course and current username from the socket properties
         getUserData(req, function(course, username){
 
             // fetch the participant model for the given user and room
-            // and then save it with the updated state
-            new Participant({room: roomId, username: username})
+            // and then save it with the updated timestamp
+            new Participant({room_id: room_id, username: username})
                 .fetch({require: true})
                 .then(function(p) {
                     p.save({lastSeen: new Date()}, {patch: true})
@@ -113,8 +132,35 @@ app.io.route('message', {
             Sends a message in a given room
          */
 
-        console.log("send message")
-        
+        // load the room and message from the request data
+        room_id = req.data.room
+        msg = req.data.message
+
+        // load in the course and current username from the socket properties
+        getUserData(req, function(course, username){
+
+            // fetch the participant model for the given user and room
+            new Participant({room_id: room_id, username: username})
+                .fetch({require: true})
+                .then(function(p) {
+
+                    // Create a new message from the given participant
+                    new Message({participant: p.id, message: msg}).save()
+
+                        // After the message is saved, send it to everyone in the room
+                        .then(function() {
+                            new ParticipantList()
+                                .query()
+                                .where({room_id: room_id})
+                                .select()
+                                .then(function(participants) {
+                                    participants.map(function(p) {
+                                        app.io.sendToUser(course, p.username, "message", msg)
+                                    })
+                                })
+                        })
+                })
+        })
     }
 })
 
