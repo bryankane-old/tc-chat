@@ -1,11 +1,13 @@
-var Bookshelf  = require('bookshelf').db;
-var Room = require('./room')
-var Message = require('./message')
+Bookshelf  = require('bookshelf').db;
+Room = require('./room')
+Message = require('./message')
+_ = require('underscore')
 
 module.exports = Bookshelf.Model.extend({
     tableName: 'participants',
     defaults: {
         lastSeen:  new Date(),
+        state: "maximized"
     },
     room: function() {
         return this.belongsTo(Room)
@@ -18,18 +20,16 @@ module.exports = Bookshelf.Model.extend({
         this.on("saved", this.sendData)
     },
     sendData: function() {
-        // Load the associated `room` for this participant
-        this.load('room').then(function(participant) {
+        console.log("sending room data!")
+        this.load(['room', 'room.participants'])
+        .then(function(p) {
+            p = p.toJSON()
+            console.log(p)
+            p.room.participants = _.pluck(p.room.participants, "username")
+            console.log(p)
 
-            // Determine which course this participant is in
-            course = participant.related('room').get('course')
-
-            // Serialize the participant object data
-            participantData = participant.toJSON({shallow: true})
-
-            // Send the participant object data to the user
-            app.io.sendToUser(course, participant.get('username'), 'participant', participantData)
-            
+            app.io.sendToUser(p.course, p.username, 'participant', p)
         })
+        
     }
 });

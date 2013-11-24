@@ -1,12 +1,13 @@
-var Bookshelf  = require('bookshelf').db;
-var Participant = require('./participant')
+Bookshelf  = require('bookshelf').db;
+Participant = require('./participant')
+Room = require('./room')
 
 module.exports = Bookshelf.Model.extend({
-	tableName: 'messages',
-	participant: function() {
-		return this.belongsTo(Participant)
-	},
-	defaults: {
-        timestamp: new Date(),
+    tableName: 'messages',
+    participant: function() {
+        return this.belongsTo(Participant)
+    },
+    room: function() {
+        return this.belongsTo(Room)
     }
 });
