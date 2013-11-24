@@ -32,7 +32,14 @@ app.io.route('user', {
     req.socket.set("username", username)
     var userRoom = course + "_" + username
     req.io.join(userRoom)
-    req.io.emit('login', 'loggedin')
+
+    // Load all rooms that the user is in, along with all associated messages
+    new ParticipantList()
+      .fetch({withRelated: ['room', 'messages']})
+      .then(function(participants) {
+        // Send the user the initial data necessary to start the chat application
+        req.io.emit('bootstrap', participants)
+      })
   }
 })
 
@@ -145,7 +152,7 @@ app.io.route('message', {
         .then(function(p) {
 
           // Create a new message from the given participant
-          new Message({participant: p.id, message: msg}).save()
+          new Message({participant_id: p.id, message: msg}).save()
 
             // After the message is saved, send it to everyone in the room
             .then(function() {

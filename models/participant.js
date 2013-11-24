@@ -1,5 +1,6 @@
 var Bookshelf  = require('bookshelf').db;
 var Room = require('./room')
+var Message = require('./message')
 
 module.exports = Bookshelf.Model.extend({
     tableName: 'participants',
@@ -8,6 +9,9 @@ module.exports = Bookshelf.Model.extend({
     },
     room: function() {
         return this.belongsTo(Room)
+    },
+    messages: function() {
+        return this.hasMany(Message)
     },
     initialize: function() {
         // Every time the participant object is updated, update the client
